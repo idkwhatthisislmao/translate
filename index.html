@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cipher Translate</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --google-blue: #1a73e8;
+            --google-gray: #5f6368;
+            --border-color: #dadce0;
+            --bg-color: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Header mimic */
+        header {
+            width: 100%;
+            padding: 15px 30px;
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        .logo { color: var(--google-blue); font-size: 22px; font-weight: 500; }
+        .sub-logo { color: var(--google-gray); font-size: 22px; margin-left: 5px; }
+
+        .container {
+            width: 95%;
+            max-width: 1200px;
+            margin-top: 40px;
+        }
+
+        .translator-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            overflow: hidden;
+        }
+
+        /* Controls / Lang Switcher */
+        .controls {
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            height: 48px;
+        }
+
+        .lang-tab {
+            flex: 1;
+            text-align: center;
+            color: var(--google-blue);
+            font-weight: 500;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #swap-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--google-gray);
+            padding: 10px;
+            border-radius: 50%;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #swap-btn:hover { background-color: #f1f3f4; }
+
+        /* Main Content Area */
+        .content {
+            display: flex;
+            min-height: 250px;
+        }
+
+        .pane {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-pane { border-right: 1px solid var(--border-color); }
+
+        textarea {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            font-size: 24px;
+            color: #202124;
+            resize: none;
+            padding: 0;
+            font-family: inherit;
+        }
+
+        #output-text {
+            font-size: 24px;
+            color: #202124;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .placeholder { color: #70757a; }
+
+        /* Mobile View */
+        @media (max-width: 768px) {
+            .content { flex-direction: column; }
+            .input-pane { border-right: none; border-bottom: 1px solid var(--border-color); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <span class="logo"></span> <span class="sub-logo">Translate</span>
+    </header>
+
+    <div class="container">
+        <div class="translator-card">
+            <div class="controls">
+                <div class="lang-tab" id="label-left">English</div>
+                <button id="swap-btn" title="Swap languages">
+                    <span class="material-icons-outlined">swap_horiz</span>
+                </button>
+                <div class="lang-tab" id="label-right">Cipher</div>
+            </div>
+
+            <div class="content">
+                <div class="pane input-pane">
+                    <textarea id="input-text" placeholder="Enter text"></textarea>
+                </div>
+                <div class="pane output-pane">
+                    <div id="output-text" class="placeholder">Translation</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const inputArea = document.getElementById('input-text');
+        const outputArea = document.getElementById('output-text');
+        const swapBtn = document.getElementById('swap-btn');
+        const labelLeft = document.getElementById('label-left');
+        const labelRight = document.getElementById('label-right');
+
+        let currentMode = 'encode'; // Initial state
+        let debounceTimer;
+
+        // Logic to fetch from your API
+        async function fetchTranslation() {
+            const text = inputArea.value.trim();
+
+            if (!text) {
+                outputArea.innerText = "Translation";
+                outputArea.classList.add('placeholder');
+                return;
+            }
+
+            try {
+                const url = `https://vexil.zef.lol/?mode=${currentMode}&text=${encodeURIComponent(text)}`;
+                
+                const response = await fetch(url);
+                const result = await response.text(); 
+
+                outputArea.innerText = result;
+                outputArea.classList.remove('placeholder');
+            } catch (err) {
+                outputArea.innerText = "Error: Could not reach API";
+                console.error(err);
+            }
+        }
+
+        // Debounce: Wait for user to stop typing
+        inputArea.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(fetchTranslation, 300);
+        });
+
+        // Swap Logic
+        swapBtn.addEventListener('click', () => {
+            // Switch Mode
+            currentMode = (currentMode === 'encode') ? 'decode' : 'encode';
+
+            // Swap Labels
+            if (currentMode === 'encode') {
+                labelLeft.innerText = "English";
+                labelRight.innerText = "Cipher";
+            } else {
+                labelLeft.innerText = "Cipher";
+                labelRight.innerText = "English";
+            }
+
+            // Move output text to input to "reverse" the translation easily
+            if (!outputArea.classList.contains('placeholder')) {
+                inputArea.value = outputArea.innerText;
+            }
+
+            fetchTranslation();
+        });
+    </script>
+</body>
+</html>
